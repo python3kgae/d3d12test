@@ -36,16 +36,19 @@ set_source_files_properties(shader.hlsl PROPERTIES ShaderType "cs")
 set_source_files_properties(${HLSL_SHADER_FILES} PROPERTIES ShaderModel "6_0")
 set (dxc_bin_dir ${dxc_SOURCE_DIR}/bin/x64)
 
+if (NOT WIN32)
+        file(COPY ${dxc_bin_dir}/dxc DESTINATION ${dxc_SOURCE_DIR}/lib/x64 FILE_PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ)
+        file(CREATE_LINK ${dxc_SOURCE_DIR}/lib/x64/libdxcompiler.so ${dxc_SOURCE_DIR}/lib/x64/libdxcompiler.so.3.7)
+        set (dxc_bin_dir ${dxc_SOURCE_DIR}/lib/x64)
+endif()
+
 foreach(FILE ${HLSL_SHADER_FILES})
   get_filename_component(FILE_WE ${FILE} NAME_WE)
   get_source_file_property(shadertype ${FILE} ShaderType)
   get_source_file_property(shadermodel ${FILE} ShaderModel)
-    if (NOT WIN32)
-        file(COPY ${dxc_bin_dir}/dxc DESTINATION ${dxc_SOURCE_DIR}/lib/x64 FILE_PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ)
-        file(CREATE_LINK ${dxc_SOURCE_DIR}/lib/x64/libdxcompiler.so ${dxc_SOURCE_DIR}/lib/x64/libdxcompiler.so.3.7)
-        set (dxc_bin_dir ${dxc_SOURCE_DIR}/lib/x64)
-  endif()
+
   add_custom_command(TARGET shaders
+                    COMMAND export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:./
                     COMMAND ${dxc_bin_dir}/dxc /Emain /T${shadertype}_${shadermodel} $<IF:$<CONFIG:DEBUG>,/Od,/O3> /Fo ${CMAKE_BINARY_DIR}/${FILE_WE}.cso  ${CMAKE_CURRENT_SOURCE_DIR}/${FILE}
                     MAIN_DEPENDENCY ${FILE}
                     COMMENT "HLSL ${FILE}"
